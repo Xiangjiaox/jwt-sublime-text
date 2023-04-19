@@ -1,0 +1,5 @@
+// JWTDecode Default Settings
+{
+    // Whether or not to format the decoded result using JSON Pretty. 
+    "format_on_decode": false,
+}

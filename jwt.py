@@ -3,6 +3,7 @@ import json
 import sublime
 import sublime_plugin
 
+SETTINGS_FILE = 'JWTDecode.sublime-settings'
 
 class JwtCommand(sublime_plugin.TextCommand):
     def run(self, edit, text):
@@ -12,8 +13,10 @@ class JwtCommand(sublime_plugin.TextCommand):
                 new_file = self.view.window().new_file()
                 new_file.run_command('append', {"characters": decoded_jwt})
                 new_file.assign_syntax(sublime.find_syntax_by_name("JSON")[0])
+                post_processing(new_file)
             except (UnicodeDecodeError, base64.binascii.Error):
                 sublime.error_message("Invalid JWT")
+            return
 
         for selected_text in self.view.sel():
             lines = self.view.split_by_newlines(selected_text)
@@ -35,6 +38,7 @@ class JwtCommand(sublime_plugin.TextCommand):
                 sublime.error_message("Invalid JWT(s) on line(s): {}".format(errors))
             if any_success:
                 self.view.assign_syntax(sublime.find_syntax_by_name("JSON")[0])
+                post_processing(self.view)
 
     def input(self, args):
         return EncodedInputHandler()
@@ -60,6 +64,30 @@ def decode_jwt(encoded_token):
 
     return json.dumps(dict)
 
-
 def base64_url_decode(encoded_string):
     return base64.urlsafe_b64decode(encoded_string + '=' * (4 - len(encoded_string) % 4)).decode("UTF-8")
+
+def post_processing(view):
+    if sublime.load_settings(SETTINGS_FILE).get("format_on_decode"):
+        format_output(view)
+
+def format_output(view):
+    formatter_command = get_json_formatter_command()
+    if formatter_command is not None:
+        view.run_command(formatter_command)
+
+def get_json_formatter_command():
+    formatter = 'Pretty JSON'
+    installed_packages = sublime.load_settings('Package Control.sublime-settings').get('installed_packages', [])
+    ignored_packages = sublime.load_settings('Preferences.sublime-settings').get('ignored_packages', [])
+
+    if formatter not in installed_packages:
+        sublime.status_message('Unable to format decoded output: package "Pretty JSON" is not installed')
+        return None
+
+    if formatter in ignored_packages:
+        FORMATTER_FOUND = None
+        sublime.status_message('Unable to format decoded output: package "Pretty JSON" is installed, but in your "ignored_packages"')
+        return None
+    
+    return "pretty_json"
