@@ -86,7 +86,6 @@ def get_json_formatter_command():
         return None
 
     if formatter in ignored_packages:
-        FORMATTER_FOUND = None
         sublime.status_message('Unable to format decoded output: package "Pretty JSON" is installed, but in your "ignored_packages"')
         return None
     
